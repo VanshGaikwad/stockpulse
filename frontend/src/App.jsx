@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Navbar from './components/Navbar.jsx';
-import DemoWalkthrough from './components/DemoWalkthrough.jsx';
+import OnboardingGuide from './components/OnboardingGuide.jsx';
+import HowItWorksModal from './components/HowItWorksModal.jsx';
 import ScoreStrip from './components/ScoreStrip.jsx';
 import SuggestionsQueue from './components/SuggestionsQueue.jsx';
 import CatalogBoard from './components/CatalogBoard.jsx';
@@ -17,8 +18,6 @@ import {
   updateProductStock,
   actOnPricingSuggestion,
   actOnReorderSuggestion,
-  requestPricingSuggestion,
-  requestReorderSuggestion,
 } from './api.js';
 
 export default function App() {
@@ -28,8 +27,13 @@ export default function App() {
   const [stats, setStats] = useState(null);
   const [activeStrategy, setActiveStrategy] = useState('hybrid');
   const [streamModalProductId, setStreamModalProductId] = useState(null);
+  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Gamified onboarding guide state
+  const [hasTriggeredSale, setHasTriggeredSale] = useState(false);
+  const [hasApprovedSuggestion, setHasApprovedSuggestion] = useState(false);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -78,10 +82,10 @@ export default function App() {
     try {
       await setStrategyConfig(strategy);
       setActiveStrategy(strategy);
-      showToast(`Runtime Strategy switched to "${strategy.toUpperCase()}"`, 'success');
+      showToast(`Switched to "${strategy.toUpperCase()}" engine`, 'success');
       loadData();
     } catch (err) {
-      showToast(`Strategy switch failed: ${err.message}`, 'error');
+      showToast(`Strategy switch error: ${err.message}`, 'error');
     }
   };
 
@@ -90,10 +94,12 @@ export default function App() {
     try {
       setIsLoading(true);
       await reseedDatabase();
+      setHasTriggeredSale(false);
+      setHasApprovedSuggestion(false);
       await loadData();
-      showToast('Database reseeded with Addendum A baseline products', 'success');
+      showToast('Catalog reset back to original 8 sample products', 'success');
     } catch (err) {
-      showToast(`Reseed error: ${err.message}`, 'error');
+      showToast(`Reset error: ${err.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -103,11 +109,12 @@ export default function App() {
   const handleSimulateOrder = async (productId, quantity = 1) => {
     try {
       setIsLoading(true);
+      setHasTriggeredSale(true);
       const res = await simulateOrder(productId, quantity);
-      showToast(res.message || `Simulated sale of ${quantity} units`, 'success');
+      showToast(res.message || `Customer purchased ${quantity} unit(s)!`, 'success');
       await loadData();
     } catch (err) {
-      showToast(`Sale simulation failed: ${err.message}`, 'error');
+      showToast(`Order simulation failed: ${err.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -132,10 +139,11 @@ export default function App() {
     try {
       setIsLoading(true);
       const res = await actOnPricingSuggestion(id, 'ACCEPT');
+      setHasApprovedSuggestion(true);
       showToast(res.message, 'success');
       await loadData();
     } catch (err) {
-      showToast(`Accept failed: ${err.message}`, 'error');
+      showToast(`Approval failed: ${err.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -145,10 +153,10 @@ export default function App() {
     try {
       setIsLoading(true);
       await actOnPricingSuggestion(id, 'REJECT');
-      showToast('Pricing suggestion rejected', 'info');
+      showToast('Suggestion declined. Current price kept.', 'info');
       await loadData();
     } catch (err) {
-      showToast(`Reject failed: ${err.message}`, 'error');
+      showToast(`Action failed: ${err.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -159,10 +167,11 @@ export default function App() {
     try {
       setIsLoading(true);
       const res = await actOnReorderSuggestion(id, 'ACCEPT');
+      setHasApprovedSuggestion(true);
       showToast(res.message, 'success');
       await loadData();
     } catch (err) {
-      showToast(`Accept failed: ${err.message}`, 'error');
+      showToast(`Restock approval failed: ${err.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -172,52 +181,27 @@ export default function App() {
     try {
       setIsLoading(true);
       await actOnReorderSuggestion(id, 'REJECT');
-      showToast('Reorder suggestion rejected', 'info');
+      showToast('Restock order declined.', 'info');
       await loadData();
     } catch (err) {
-      showToast(`Reject failed: ${err.message}`, 'error');
+      showToast(`Action failed: ${err.message}`, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // On-demand calls
-  const handleRequestPricing = async (id) => {
-    try {
-      setIsLoading(true);
-      await requestPricingSuggestion(id, 'MANUAL');
-      showToast('On-demand pricing suggestion generated', 'success');
-      await loadData();
-    } catch (err) {
-      showToast(`Failed: ${err.message}`, 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRequestReorder = async (id) => {
-    try {
-      setIsLoading(true);
-      await requestReorderSuggestion(id, 'MANUAL');
-      showToast('On-demand reorder suggestion generated', 'success');
-      await loadData();
-    } catch (err) {
-      showToast(`Failed: ${err.message}`, 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Walkthrough Demos
+  // 1-Click Guided Demos
   const handleRunLowStockDemo = async () => {
-    // PRD-003 (T-Shirt): Stock 8, Threshold 15 -> order 2 units -> stock drops to 6
+    // PRD-003: Cotton T-Shirt (Stock 8 -> order 2 -> stock 6 < threshold 15)
     await handleSimulateOrder('PRD-003', 2);
   };
 
   const handleRunSpikeDemo = async () => {
-    // PRD-008 (Hoodie): High velocity item -> order 8 units
-    await handleSimulateOrder('PRD-008', 8);
+    // PRD-008: Hoodie (Order 5 units -> triggers spike)
+    await handleSimulateOrder('PRD-008', 5);
   };
+
+  const totalPending = pricingSuggestions.length + reorderSuggestions.length;
 
   return (
     <div className="app-container">
@@ -233,13 +217,13 @@ export default function App() {
                 ? '#e11d48'
                 : toast.type === 'success'
                 ? '#059669'
-                : '#4b5563',
+                : '#374151',
             color: '#fff',
-            padding: '10px 18px',
+            padding: '12px 20px',
             borderRadius: 8,
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 12,
+            fontSize: 13,
+            fontWeight: 500,
             zIndex: 9999,
           }}
         >
@@ -247,30 +231,34 @@ export default function App() {
         </div>
       )}
 
-      {/* Masthead Navbar */}
+      {/* Top Navigation */}
       <Navbar
         activeStrategy={activeStrategy}
         onStrategyChange={handleStrategyChange}
         onReseed={handleReseed}
+        onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
         isRefreshing={isLoading}
       />
 
-      {/* Evaluation Walkthrough Banner */}
-      <DemoWalkthrough
+      {/* Friendly 3-Step Interactive Onboarding */}
+      <OnboardingGuide
+        pendingCount={totalPending}
         onRunLowStockDemo={handleRunLowStockDemo}
         onRunSpikeDemo={handleRunSpikeDemo}
-        onOpenStreamModal={(id) => setStreamModalProductId(id)}
+        onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
+        hasTriggeredSale={hasTriggeredSale}
+        hasApprovedSuggestion={hasApprovedSuggestion}
       />
 
-      {/* Metrics Score Strip */}
+      {/* Quick Overview Numbers */}
       <ScoreStrip stats={stats} />
 
-      {/* Pending Human Approval Queue (Agentic Checkpoint) */}
+      {/* Pending Approval Section */}
       <div className="section-rule">
         <div className="section-rule-label">
-          <span>Human-in-the-Loop Approval Queue</span>
+          <span>🔔 Decisions Waiting for Your Approval</span>
           <span className="section-rule-count">
-            {pricingSuggestions.length + reorderSuggestions.length} Pending
+            {totalPending} {totalPending === 1 ? 'Action' : 'Actions'}
           </span>
         </div>
         <div className="section-rule-line" />
@@ -290,7 +278,7 @@ export default function App() {
       {/* Product Catalog & Simulation Board */}
       <div className="section-rule">
         <div className="section-rule-label">
-          <span>Catalog &amp; Inventory Controller</span>
+          <span>📦 Store Catalog &amp; Interactive Simulator</span>
           <span className="section-rule-count">{products.length} Products</span>
         </div>
         <div className="section-rule-line" />
@@ -300,8 +288,6 @@ export default function App() {
         products={products}
         onSimulateOrder={handleSimulateOrder}
         onUpdateStock={handleUpdateStock}
-        onRequestPricing={handleRequestPricing}
-        onRequestReorder={handleRequestReorder}
         onOpenStreamModal={(id) => setStreamModalProductId(id)}
         isLoading={isLoading}
       />
@@ -314,6 +300,12 @@ export default function App() {
           onRefreshData={loadData}
         />
       )}
+
+      {/* How It Works Modal */}
+      <HowItWorksModal
+        isOpen={isHowItWorksOpen}
+        onClose={() => setIsHowItWorksOpen(false)}
+      />
     </div>
   );
 }

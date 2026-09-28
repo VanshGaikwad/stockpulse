@@ -18,7 +18,7 @@ export default function AIStreamModal({ productId, onClose, onRefreshData }) {
     setRecommendation(null);
     setError(null);
 
-    const eventSource = new EventSource(`http://localhost:8080/products/${productId}/suggest-pricing/stream?trigger=MANUAL`);
+    const eventSource = new EventSource(`http://localhost:8081/products/${productId}/suggest-pricing/stream?trigger=MANUAL`);
 
     eventSource.addEventListener('start', (e) => {
       const data = JSON.parse(e.data);

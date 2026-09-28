@@ -1,0 +1,57 @@
+/* Simple Black‑and‑White Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+:root {
+  /* Core colors */
+  --bg-base: #000000;            /* page background */
+  --bg-surface: #111111;        /* panels, cards */
+  --ink-primary: #ffffff;      /* main text */
+  --ink-secondary: #cccccc;    /* secondary text */
+  --ink-muted: #888888;        /* muted text */
+  --border: rgba(255,255,255,0.1);
+  --radius: 6px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; margin:0; padding:0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--ink-primary);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 { color: var(--ink-primary); }
+
+a { color: var(--ink-secondary); text-decoration:none; }
+a:hover { color: var(--ink-primary); }
+
+button {
+  font-family: var(--font-sans);
+  background: var(--bg-surface);
+  color: var(--ink-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+button:hover { background: var(--bg-base); border-color: var(--ink-secondary); }
+
+/* Simple card */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 8px 0;
+}
+
+/* Layout helper */
+.container { max-width: 1200px; margin:auto; padding:20px; }
+
+/* Minimal scrollbar */
+::-webkit-scrollbar { width:8px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius:4px; }

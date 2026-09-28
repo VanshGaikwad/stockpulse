@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:8081';
 
 export async function fetchProducts({ status, category } = {}) {
   const params = new URLSearchParams();

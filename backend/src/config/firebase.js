@@ -1,3 +1,18 @@
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -5,10 +20,20 @@ import path from 'path';
 
 dotenv.config();
 
+// User's Web App Firebase configuration
+export const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyDdhzAn1tB7Nm3kF48RnpyDHKtvMPZwm1c",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "zycus-hackathon.firebaseapp.com",
+  projectId: process.env.FIREBASE_PROJECT_ID || "zycus-hackathon",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "zycus-hackathon.firebasestorage.app",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "159395198853",
+  appId: process.env.FIREBASE_APP_ID || "1:159395198853:web:29b80032782eade86576ec"
+};
+
 let dbInstance = null;
 let isMock = false;
 
-// Robust In-Memory Firestore Adapter for zero-friction local development & evaluation
+// Robust In-Memory Firestore Fallback for zero-friction local development & resilient fallback
 class MemoryCollection {
   constructor(name) {
     this.name = name;
@@ -170,60 +195,135 @@ class MemoryFirestoreDB {
   }
 }
 
+// Client SDK Firestore Adapter connecting to zycus-hackathon
+class ClientFirestoreAdapter {
+  constructor(firestoreInstance) {
+    this.db = firestoreInstance;
+  }
+
+  collection(name) {
+    const firestore = this.db;
+    const colRef = collection(firestore, name);
+
+    return {
+      doc(id) {
+        const docRef = doc(firestore, name, id);
+        return {
+          id,
+          async get() {
+            const snap = await getDoc(docRef);
+            return {
+              id: snap.id,
+              exists: snap.exists(),
+              data: () => snap.data(),
+            };
+          },
+          async set(data, options = {}) {
+            await setDoc(docRef, data, options);
+            return { writeTime: new Date() };
+          },
+          async update(updates) {
+            await updateDoc(docRef, updates);
+            return { writeTime: new Date() };
+          },
+          async delete() {
+            await deleteDoc(docRef);
+            return { writeTime: new Date() };
+          },
+        };
+      },
+      where(field, opStr, value) {
+        return this._buildQuery([where(field, opStr, value)]);
+      },
+      _buildQuery(clauses) {
+        const self = this;
+        return {
+          where(f, op, v) {
+            return self._buildQuery([...clauses, where(f, op, v)]);
+          },
+          orderBy(field, direction = 'asc') {
+            return self._buildQuery([...clauses, orderBy(field, direction)]);
+          },
+          limit(num) {
+            return self._buildQuery([...clauses, limit(num)]);
+          },
+          async get() {
+            const q = query(colRef, ...clauses);
+            const snap = await getDocs(q);
+            return {
+              empty: snap.empty,
+              size: snap.size,
+              docs: snap.docs.map((d) => ({
+                id: d.id,
+                exists: d.exists(),
+                data: () => d.data(),
+              })),
+            };
+          },
+        };
+      },
+      async get() {
+        const snap = await getDocs(colRef);
+        return {
+          empty: snap.empty,
+          size: snap.size,
+          docs: snap.docs.map((d) => ({
+            id: d.id,
+            exists: d.exists(),
+            data: () => d.data(),
+          })),
+        };
+      },
+    };
+  }
+}
+
 export function initFirebase() {
   if (dbInstance) return dbInstance;
 
+  // 1. Check for Service Account credentials first (Admin SDK)
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  const projectId = process.env.FIREBASE_PROJECT_ID;
 
   try {
-    if (admin.apps.length > 0) {
-      dbInstance = admin.firestore();
-      console.log('[Firebase] Using existing initialized Firebase Admin instance');
-      return dbInstance;
-    }
-
     if (serviceAccountJson) {
       const credentials = JSON.parse(serviceAccountJson);
       admin.initializeApp({
         credential: admin.credential.cert(credentials),
-        projectId: credentials.project_id || projectId,
+        projectId: credentials.project_id || firebaseConfig.projectId,
       });
       dbInstance = admin.firestore();
-      console.log(`[Firebase] Initialized with Service Account JSON. Project: ${credentials.project_id || projectId}`);
+      console.log(`[Firebase] Initialized with Service Account JSON: ${credentials.project_id}`);
       return dbInstance;
     } else if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
       const resolvedPath = path.resolve(serviceAccountPath);
       const credentials = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
       admin.initializeApp({
         credential: admin.credential.cert(credentials),
-        projectId: credentials.project_id || projectId,
+        projectId: credentials.project_id || firebaseConfig.projectId,
       });
       dbInstance = admin.firestore();
       console.log(`[Firebase] Initialized with Service Account file: ${resolvedPath}`);
       return dbInstance;
-    } else if (process.env.FIRESTORE_EMULATOR_HOST) {
-      admin.initializeApp({
-        projectId: projectId || 'stockpulse-dev',
-      });
-      dbInstance = admin.firestore();
-      console.log(`[Firebase] Connected to Firestore Emulator at ${process.env.FIRESTORE_EMULATOR_HOST}`);
-      return dbInstance;
-    } else if (projectId) {
-      admin.initializeApp({
-        projectId,
-      });
-      dbInstance = admin.firestore();
-      console.log(`[Firebase] Initialized with Google Cloud Project ID: ${projectId}`);
-      return dbInstance;
     }
-  } catch (error) {
-    console.warn('[Firebase] Notice: Cloud credentials initialization error:', error.message);
+  } catch (adminErr) {
+    console.warn('[Firebase] Admin SDK notice:', adminErr.message);
   }
 
-  // Graceful in-memory Firestore engine for instant 5-minute zero-dependency evaluation
-  console.log('[Firebase] Running with StockPulse Embedded Firestore Engine (Zero Config Mode)');
+  // 2. Initialize with User's Firebase Config (zycus-hackathon)
+  try {
+    console.log(`[Firebase] Initializing Firebase App with Project ID: "${firebaseConfig.projectId}"`);
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
+    dbInstance = new ClientFirestoreAdapter(firestore);
+    console.log(`[Firebase] Successfully connected to Firebase Project: "${firebaseConfig.projectId}" (${firebaseConfig.authDomain})`);
+    return dbInstance;
+  } catch (sdkError) {
+    console.warn('[Firebase] Client SDK notice:', sdkError.message);
+  }
+
+  // 3. Graceful in-memory fallback
+  console.log('[Firebase] Running with StockPulse Embedded Engine');
   dbInstance = new MemoryFirestoreDB();
   isMock = true;
   return dbInstance;

@@ -4,18 +4,16 @@ import {
   ShoppingCart,
   Zap,
   Sparkles,
-  PackagePlus,
   AlertTriangle,
   Flame,
   ArrowUpDown,
+  Info,
 } from 'lucide-react';
 
 export default function CatalogBoard({
   products,
   onSimulateOrder,
   onUpdateStock,
-  onRequestPricing,
-  onRequestReorder,
   onOpenStreamModal,
   isLoading,
 }) {
@@ -44,17 +42,17 @@ export default function CatalogBoard({
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PRICE_REVIEW_PENDING':
-        return <span className="badge badge-review">Review Pending</span>;
+        return <span className="badge badge-review">⏳ Price Review Pending</span>;
       case 'OUT_OF_STOCK':
-        return <span className="badge badge-out-of-stock">Out of Stock</span>;
+        return <span className="badge badge-out-of-stock">🚫 Out of Stock</span>;
       default:
-        return <span className="badge badge-active">Active</span>;
+        return <span className="badge badge-active">🟢 In Stock &amp; Active</span>;
     }
   };
 
   const handleStockPrompt = (prod) => {
     const current = prod.stockLevel;
-    const input = prompt(`Enter new stock level for ${prod.name}:`, current);
+    const input = prompt(`Enter new inventory count for "${prod.name}":`, current);
     if (input !== null && !isNaN(Number(input))) {
       onUpdateStock(prod.id, Number(input));
     }
@@ -62,6 +60,13 @@ export default function CatalogBoard({
 
   return (
     <div>
+      <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-subtle)', borderRadius: 8, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Info size={16} style={{ color: 'var(--accent-terracotta)', flexShrink: 0 }} />
+        <div style={{ fontSize: 12, color: 'var(--ink-secondary)' }}>
+          <strong>How to test:</strong> Click <strong style={{ color: 'var(--ink-primary)' }}>"🛒 Buy 1"</strong> or <strong style={{ color: 'var(--accent-purple)' }}>"⚡ Viral (+5)"</strong> next to any product to simulate real customer orders. Notice how stock drops in real time and automatically triggers AI advice!
+        </div>
+      </div>
+
       <div className="filter-bar">
         {/* Category Tabs */}
         <div className="filter-group">
@@ -71,7 +76,7 @@ export default function CatalogBoard({
               className={`filter-tab ${categoryFilter === cat ? 'active' : ''}`}
               onClick={() => setCategoryFilter(cat)}
             >
-              {cat}
+              {cat === 'ALL' ? 'All Products' : cat.charAt(0) + cat.slice(1).toLowerCase()}
             </button>
           ))}
         </div>
@@ -89,20 +94,20 @@ export default function CatalogBoard({
             onClick={() => setStatusFilter('LOW_STOCK')}
           >
             <AlertTriangle size={11} style={{ display: 'inline', marginRight: 4, color: 'var(--accent-amber)' }} />
-            Low Stock
+            Low Stock Alerts
           </button>
           <button
             className={`filter-tab ${statusFilter === 'SPIKE' ? 'active' : ''}`}
             onClick={() => setStatusFilter('SPIKE')}
           >
             <Flame size={11} style={{ display: 'inline', marginRight: 4, color: 'var(--accent-purple)' }} />
-            Demand Spikes
+            High Velocity Items
           </button>
           <button
             className={`filter-tab ${statusFilter === 'PENDING' ? 'active' : ''}`}
             onClick={() => setStatusFilter('PENDING')}
           >
-            Pending Review
+            Pending Decision
           </button>
         </div>
 
@@ -111,7 +116,7 @@ export default function CatalogBoard({
           <input
             type="text"
             className="search-input"
-            placeholder="Search SKU or product name..."
+            placeholder="🔍 Search by name or SKU..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -123,13 +128,13 @@ export default function CatalogBoard({
         <table className="catalog-table">
           <thead>
             <tr>
-              <th>Product / SKU</th>
+              <th>Product Details</th>
               <th>Category</th>
-              <th>Current Price</th>
-              <th>Stock / Threshold</th>
-              <th>24h Velocity</th>
+              <th>Live Price</th>
+              <th>Inventory Status</th>
+              <th>Sales Speed</th>
               <th>Status</th>
-              <th>Simulate &amp; Test</th>
+              <th>Simulate Customer Orders</th>
             </tr>
           </thead>
           <tbody>
@@ -164,11 +169,11 @@ export default function CatalogBoard({
                         {prod.stockLevel} units
                       </span>
                       <span style={{ fontSize: 11, color: 'var(--ink-muted)' }}>
-                        / {prod.reorderThreshold}
+                        (Min: {prod.reorderThreshold})
                       </span>
                       {isLow && (
-                        <span title="Below Reorder Threshold!" style={{ color: 'var(--accent-amber)' }}>
-                          ⚠️
+                        <span className="badge badge-low-stock" style={{ padding: '1px 6px', fontSize: 9 }}>
+                          Low!
                         </span>
                       )}
                     </div>
@@ -177,7 +182,7 @@ export default function CatalogBoard({
                   <td>
                     <div className={`velocity-pill ${isSpike ? 'spike' : ''}`}>
                       {isSpike && <Flame size={12} />}
-                      <span>{prod.demandVelocity || 0} /day</span>
+                      <span>{prod.demandVelocity || 0} sold/day</span>
                     </div>
                   </td>
 
@@ -190,10 +195,10 @@ export default function CatalogBoard({
                         className="btn btn-secondary btn-sm"
                         onClick={() => onSimulateOrder(prod.id, 1)}
                         disabled={isLoading || prod.stockLevel === 0}
-                        title="Simulate 1 sale (decrements stock, increments velocity, triggers agentic loop)"
+                        title="Simulate 1 customer purchase"
                       >
-                        <ShoppingCart size={11} />
-                        Sale (1)
+                        <ShoppingCart size={12} />
+                        Buy 1
                       </button>
 
                       {/* 1-click simulate surge (5 units) */}
@@ -201,30 +206,30 @@ export default function CatalogBoard({
                         className="btn btn-secondary btn-sm"
                         onClick={() => onSimulateOrder(prod.id, 5)}
                         disabled={isLoading || prod.stockLevel === 0}
-                        title="Simulate surge of 5 orders"
+                        title="Simulate sudden viral sales surge of 5 orders"
                       >
-                        <Zap size={11} style={{ color: 'var(--accent-purple)' }} />
-                        Surge (5)
-                      </button>
-
-                      {/* Manual stock adjustment */}
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => handleStockPrompt(prod)}
-                        title="Directly edit stock level"
-                      >
-                        <ArrowUpDown size={11} />
-                        Stock
+                        <Zap size={12} style={{ color: 'var(--accent-purple)' }} />
+                        Viral (+5)
                       </button>
 
                       {/* Live SSE Token Stream */}
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => onOpenStreamModal(prod.id)}
-                        title="Live Stream AI Dynamic Pricing Reasoning"
+                        title="Watch AI reason token-by-token live"
                       >
-                        <Sparkles size={11} />
-                        AI Stream
+                        <Sparkles size={12} />
+                        Ask AI
+                      </button>
+
+                      {/* Manual stock adjustment */}
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => handleStockPrompt(prod)}
+                        title="Manually adjust inventory count"
+                      >
+                        <ArrowUpDown size={11} />
+                        Set Stock
                       </button>
                     </div>
                   </td>
