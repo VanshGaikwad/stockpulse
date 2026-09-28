@@ -64,6 +64,8 @@ The system uses deterministic rules wherever possible and delegates suitable cas
 
 # 🏗️ System Architecture
 
+![System architecture diagram](Architecture_Diagram.png)
+
 ```mermaid
 flowchart TD
 

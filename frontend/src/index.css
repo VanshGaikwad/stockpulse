@@ -1,53 +1,44 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Inter:wght@300;400;500;600;700&display=swap');
 @import './simple.css';
 :root {
-  /* Pure black‑and‑white dark theme */
-  --bg-base: #000000;                 /* deep black */
-  --bg-surface: #111111;             /* dark gray for panels */
-  --bg-card: rgba(30,30,30,0.85);    /* slightly lighter for cards */
-  --bg-card-hover: rgba(45,45,45,0.95);
-  --bg-elevated: #1e1e1e;            /* elevated elements */
-  --bg-input: #141414;               /* input background */
-
-  /* Ink */
-  --ink-primary: #f5f5f5;            /* off‑white text */
-  --ink-secondary: #b0b0b0;          /* muted text */
-  --ink-muted: #888888;
-  --ink-inverted: #000000;
-
-  /* Borders */
-  --border-subtle: rgba(255,255,255,0.07);
-  --border-medium: rgba(255,255,255,0.12);
-  --border-highlight: rgba(255,255,255,0.2);
-
-  /* Accent – grayscale */
-  --accent-primary: #ffffff;        /* pure white for interactive highlights */
-  --accent-primary-glow: rgba(255,255,255,0.25);
-  --accent-secondary: #bbbbbb;      /* light gray for secondary actions */
-  --accent-secondary-glow: rgba(200,200,200,0.2);
-  --accent-warn: #ff5555;           /* red for warnings */
-  --accent-warn-glow: rgba(255,85,85,0.2);
-
-  /* Fonts – clean professional */
+  --bg-base: #f4f5f7;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-elevated: #eef1f4;
+  --bg-input: #ffffff;
+  --ink-primary: #111827;
+  --ink-secondary: #4b5563;
+  --ink-muted: #6b7280;
+  --ink-inverted: #ffffff;
+  --border-subtle: #e5e7eb;
+  --border-medium: #d1d5db;
+  --border-highlight: #9ca3af;
+  --accent-primary: #111827;
+  --accent-primary-glow: rgba(17, 24, 39, 0.12);
+  --accent-secondary: #374151;
+  --accent-secondary-glow: rgba(55, 65, 81, 0.12);
+  --accent-warn: #b45309;
+  --accent-warn-glow: rgba(180, 83, 9, 0.12);
+  --accent-terracotta: #111827;
+  --accent-terracotta-glow: rgba(17, 24, 39, 0.12);
+  --accent-amber: #b45309;
+  --accent-teal: #047857;
+  --accent-purple: #475569;
+  --accent-rose: #be123c;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  --font-serif: 'Roboto Slab', 'Georgia', serif;
+  --font-serif: 'Fraunces', Georgia, serif;
   --font-mono: 'DM Mono', monospace;
-
-  /* Radii */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-lg: 14px;
   --radius-full: 9999px;
-
-  /* Shadows – subtle gray */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.45);
-  --shadow-lg: 0 10px 25px -5px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 20px var(--accent-primary-glow);
-
-  /* Glass effect (still monochrome) */
-  --glass-bg: rgba(20,20,20,0.6);
-  --glass-border: rgba(255,255,255,0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.14);
+  --shadow-glow: 0 0 0 3px var(--accent-primary-glow);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: #e5e7eb;
 }
 
 /* Glassmorphism helper class */
@@ -112,11 +103,7 @@ body {
   color: var(--ink-primary);
   min-height: 100vh;
   line-height: 1.5;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(226, 109, 61, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.07) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.04) 0px, transparent 60%);
-  background-attachment: fixed;
+  background-image: linear-gradient(180deg, #ffffff 0%, var(--bg-base) 420px);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -161,12 +148,12 @@ body {
 .brand-icon-box {
   width: 44px;
   height: 44px;
-  background: linear-gradient(135deg, var(--accent-terracotta), #9c3f19);
+  background: var(--ink-primary);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 16px var(--accent-terracotta-glow);
+  box-shadow: var(--shadow-sm);
   color: white;
 }
 
@@ -181,7 +168,7 @@ body {
 
 .brand-title em {
   font-style: normal;
-  color: var(--accent-terracotta);
+  color: var(--ink-primary);
 }
 
 .brand-subtitle {
@@ -946,7 +933,8 @@ body {
   padding: 16px;
   font-family: var(--font-mono);
   font-size: 12.5px;
-  color: #e5e7eb;
+  color: var(--ink-primary);
+  font-weight: 500;
   line-height: 1.7;
   max-height: 280px;
   overflow-y: auto;
